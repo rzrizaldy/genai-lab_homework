@@ -1,0 +1,836 @@
+{
+  "name": "Seller Quality Optimizer v3 - Enhanced",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.PRODUCTS_SHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Products"
+        },
+        "options": {}
+      },
+      "id": "read-products",
+      "name": "Read Products CSV",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Store all products in workflow static data for re-randomization\nconst products = $input.all().map(item => item.json);\n\nif (products.length === 0) {\n  throw new Error('No products found in sheet');\n}\n\n// Store in workflow context for later use\nconst staticData = getWorkflowStaticData('global');\nstaticData.allProducts = products;\nstaticData.attemptCount = 0;\nstaticData.maxAttempts = 50; // Prevent infinite loop\n\n// Random selection\nconst randomIndex = Math.floor(Math.random() * products.length);\nconst selectedProduct = products[randomIndex];\n\nconst asin = selectedProduct.ASIN || selectedProduct.asin;\n\nif (!asin) {\n  throw new Error('Selected product has no ASIN field');\n}\n\nreturn {\n  json: {\n    selected_asin: asin,\n    product: {\n      asin: asin,\n      title: selectedProduct.Title || selectedProduct.title || '',\n      description: selectedProduct.Description || selectedProduct.description || '',\n      image_url: selectedProduct.ImageURL || selectedProduct.image_url || selectedProduct.Image || '',\n      price: selectedProduct.Price || selectedProduct.price || '',\n      category: selectedProduct.Category || selectedProduct.category || ''\n    },\n    total_products: products.length,\n    attempt_number: 1\n  }\n};"
+      },
+      "id": "select-random-asin",
+      "name": "Select Random ASIN",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.REVIEWS_SHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Reviews"
+        },
+        "options": {}
+      },
+      "id": "read-reviews",
+      "name": "Read Reviews CSV",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        900,
+        300
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Left join and check if reviews exist\nconst selectedData = $('Select Random ASIN').first().json;\nconst selectedAsin = selectedData.selected_asin;\nconst product = selectedData.product;\n\nconst allReviews = $input.all().map(item => item.json);\n\n// Filter reviews matching this ASIN\nconst matchingReviews = allReviews.filter(review => {\n  const reviewAsin = review.productASIN || review.ProductASIN || review.product_asin || review.ASIN;\n  return reviewAsin === selectedAsin;\n});\n\nreturn {\n  json: {\n    selected_asin: selectedAsin,\n    product: product,\n    reviews: matchingReviews.length > 0 ? matchingReviews.map(r => ({\n      review_id: r.ReviewID || r.review_id || r.Id || '',\n      review_text: r.ReviewText || r.review_text || r.Text || r.Review || '',\n      rating: r.Rating || r.rating || r.Stars || 0,\n      date: r.Date || r.date || r.ReviewDate || '',\n      reviewer_name: r.ReviewerName || r.reviewer_name || r.Name || 'Anonymous'\n    })) : [],\n    review_count: matchingReviews.length,\n    has_reviews: matchingReviews.length > 0,\n    avg_rating: matchingReviews.length > 0 ? \n      (matchingReviews.reduce((sum, r) => sum + (parseFloat(r.Rating || r.rating || r.Stars) || 0), 0) / matchingReviews.length).toFixed(2) : 0,\n    attempt_number: selectedData.attempt_number || 1\n  }\n};"
+      },
+      "id": "left-join-reviews",
+      "name": "Join Reviews by ASIN",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-reviews",
+              "leftValue": "={{ $json.has_reviews }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-has-reviews",
+      "name": "Has Reviews?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Re-randomize: Pick another ASIN\nconst staticData = getWorkflowStaticData('global');\nconst allProducts = staticData.allProducts;\nconst attemptCount = (staticData.attemptCount || 0) + 1;\nconst maxAttempts = staticData.maxAttempts || 50;\n\nif (attemptCount >= maxAttempts) {\n  throw new Error(`Could not find product with reviews after ${maxAttempts} attempts`);\n}\n\nstaticData.attemptCount = attemptCount;\n\n// Pick new random product\nconst randomIndex = Math.floor(Math.random() * allProducts.length);\nconst selectedProduct = allProducts[randomIndex];\nconst asin = selectedProduct.ASIN || selectedProduct.asin;\n\nconsole.log(`Attempt ${attemptCount}: Re-randomizing to ASIN ${asin}`);\n\nreturn {\n  json: {\n    selected_asin: asin,\n    product: {\n      asin: asin,\n      title: selectedProduct.Title || selectedProduct.title || '',\n      description: selectedProduct.Description || selectedProduct.description || '',\n      image_url: selectedProduct.ImageURL || selectedProduct.image_url || selectedProduct.Image || '',\n      price: selectedProduct.Price || selectedProduct.price || '',\n      category: selectedProduct.Category || selectedProduct.category || ''\n    },\n    total_products: allProducts.length,\n    attempt_number: attemptCount + 1\n  }\n};"
+      },
+      "id": "rerandomize-asin",
+      "name": "Re-randomize ASIN",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split reviews for sentiment analysis\nconst data = $json;\nconst product = data.product;\nconst reviews = data.reviews;\n\nreturn reviews.map((review, index) => ({\n  json: {\n    asin: data.selected_asin,\n    product: product,\n    review: review,\n    review_index: index + 1,\n    total_reviews: reviews.length\n  }\n}));"
+      },
+      "id": "split-reviews",
+      "name": "Split Reviews",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "content": "You are a sentiment analysis expert for e-commerce product reviews. Analyze the review and identify any visual/quality discrepancies between customer expectations and reality.\n\nRespond with ONLY valid JSON (no markdown, no explanation):\n{\n  \"sentiment\": \"positive\" | \"negative\" | \"neutral\" | \"mixed\",\n  \"sentiment_score\": number between -1.0 (very negative) and 1.0 (very positive),\n  \"confidence\": number between 0 and 1,\n  \"emotional_tone\": \"string (e.g., frustrated, delighted, disappointed)\",\n  \"key_phrases\": [\"important phrases from review\"],\n  \"visual_discrepancy_found\": boolean,\n  \"discrepancy_details\": \"string describing what customer received vs expected (or 'None' if no discrepancy)\",\n  \"discrepancy_severity\": \"none\" | \"minor\" | \"moderate\" | \"severe\"\n}",
+              "role": "system"
+            },
+            {
+              "content": "=Product: {{ $json.product.title }}\nDescription: {{ $json.product.description }}\n\nCustomer Review ({{ $json.review.rating }} stars):\n\"{{ $json.review.review_text }}\"",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 600
+        }
+      },
+      "id": "sentiment-analysis",
+      "name": "Sentiment Analysis",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1780,
+        200
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse sentiment response\nconst originalData = $('Split Reviews').item.json;\nconst sentimentResponse = $input.first().json;\n\nlet sentiment;\ntry {\n  let content = sentimentResponse.message?.content || sentimentResponse.text || '';\n  content = content.replace(/^```json\\s*/i, '').replace(/\\s*```$/i, '').trim();\n  sentiment = JSON.parse(content);\n} catch (e) {\n  sentiment = {\n    sentiment: 'unknown',\n    sentiment_score: 0,\n    confidence: 0,\n    emotional_tone: 'parse_error',\n    key_phrases: [],\n    visual_discrepancy_found: false,\n    discrepancy_details: 'Unable to parse',\n    discrepancy_severity: 'none',\n    error: e.message\n  };\n}\n\nreturn {\n  json: {\n    ...originalData,\n    sentiment_analysis: sentiment\n  }\n};"
+      },
+      "id": "parse-sentiment",
+      "name": "Parse Sentiment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all sentiments\nconst allResults = $input.all().map(item => item.json);\n\nif (allResults.length === 0) {\n  return { json: { error: 'No results to aggregate' } };\n}\n\nconst product = allResults[0].product;\nconst asin = allResults[0].asin;\n\nconst sentiments = allResults.map(r => r.sentiment_analysis);\nconst avgScore = sentiments.reduce((sum, s) => sum + (s.sentiment_score || 0), 0) / sentiments.length;\n\n// Find most severe discrepancy\nconst severityOrder = { 'none': 0, 'minor': 1, 'moderate': 2, 'severe': 3 };\nconst worstDiscrepancy = sentiments.reduce((worst, current) => {\n  const currentSeverity = severityOrder[current.discrepancy_severity] || 0;\n  const worstSeverity = severityOrder[worst.discrepancy_severity] || 0;\n  return currentSeverity > worstSeverity ? current : worst;\n}, sentiments[0]);\n\nconst discrepancyDetails = sentiments\n  .filter(s => s.visual_discrepancy_found && s.discrepancy_details !== 'None')\n  .map(s => s.discrepancy_details);\n\nreturn {\n  json: {\n    asin: asin,\n    product: product,\n    review_count: allResults.length,\n    overall_sentiment: avgScore > 0.3 ? 'positive' : avgScore < -0.3 ? 'negative' : 'mixed',\n    avg_sentiment_score: avgScore.toFixed(2),\n    sentiment_breakdown: {\n      positive: sentiments.filter(s => s.sentiment === 'positive').length,\n      negative: sentiments.filter(s => s.sentiment === 'negative').length,\n      neutral: sentiments.filter(s => s.sentiment === 'neutral').length,\n      mixed: sentiments.filter(s => s.sentiment === 'mixed').length\n    },\n    has_visual_discrepancy: discrepancyDetails.length > 0,\n    worst_discrepancy_severity: worstDiscrepancy.discrepancy_severity,\n    discrepancy_details: discrepancyDetails,\n    reviews_analyzed: allResults.map(r => ({\n      review_text: r.review.review_text,\n      rating: r.review.rating,\n      sentiment: r.sentiment_analysis.sentiment,\n      score: r.sentiment_analysis.sentiment_score,\n      emotional_tone: r.sentiment_analysis.emotional_tone,\n      discrepancy: r.sentiment_analysis.visual_discrepancy_found ? r.sentiment_analysis.discrepancy_details : null\n    })),\n    should_generate_image: discrepancyDetails.length > 0\n  }\n};"
+      },
+      "id": "aggregate-sentiments",
+      "name": "Aggregate Sentiments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2220,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "should-generate",
+              "leftValue": "={{ $json.should_generate_image }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "should-generate-images",
+      "name": "Generate Images?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2440,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "content": "Create a detailed DALL-E 3 prompt to visualize what customers ACTUALLY received based on their negative reviews.\n\nRespond with ONLY valid JSON:\n{\n  \"dalle_prompt\": \"Professional product photography showing the ACTUAL product as described by disappointed customers. Include: specific defects mentioned, actual colors/materials/size discrepancies, quality issues. Style: e-commerce product photo, white background, studio lighting, realistic. Maximum 400 characters.\"\n}",
+              "role": "system"
+            },
+            {
+              "content": "=Product: {{ $json.product.title }}\nOriginal Description: {{ $json.product.description }}\n\nCustomer Complaints:\n{{ $json.discrepancy_details.join('\\n- ') }}\n\nWorst Severity: {{ $json.worst_discrepancy_severity }}",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4,
+          "maxTokens": 500
+        }
+      },
+      "id": "generate-image-prompt",
+      "name": "Generate Image Prompt",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2660,
+        100
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.OUTPUT_SHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Model Analysis Results"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ASIN": "={{ $json.asin }}",
+            "Product": "={{ $json.product_title }}",
+            "Sentiment": "={{ $json.overall_sentiment }}",
+            "Discrepancies": "={{ $json.discrepancy_details }}",
+            "Img1 URL (Natural)": "={{ $json.image_1_url }}",
+            "Img1 Score": "={{ $json.image_1_score }}",
+            "Img2 URL (Vivid)": "={{ $json.image_2_url }}",
+            "Img2 Score": "={{ $json.image_2_score }}",
+            "Img3 URL (D2)": "={{ $json.image_3_url }}",
+            "Img3 Score": "={{ $json.image_3_score }}",
+            "Best Image Idx": "={{ $json.best_image_index }}",
+            "Vision Analysis": "={{ $json.vision_summary }}",
+            "Date": "={{ $json.analyzed_at }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "save-analysis-to-sheets",
+      "name": "Save Analysis to Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        4400,
+        350
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate 3 images into 1 item for LLM and Sheets\nconst items = $input.all();\nconst urls = [];\nconst models = [];\n\n// Extract URLs from the previous download/generate steps\n// Since we merged, we have 3 items. Each comes from a different branch.\n// We can try to identify them or just list them.\n\nitems.forEach((item, i) => {\n  // The item.json should contain the 'url' from the DALL-E generation \n  // because Download Image usually appends or we can grab it from context\n  // But Download Image might have replaced JSON.\n  // Let's check if we can access the generation nodes directly or if the info is in the item.\n  // If Download Image replaced JSON, we might need to use $item(\"NodeName\").\n  \n  // However, to be safe, let's just grab the URLs from the generation nodes explicitly\n  // assuming the order 0,1,2 corresponds to the merge inputs.\n  \n  // We'll try to get url from json if present\n  if (item.json.url) {\n      urls.push(item.json.url);\n  } else if (item.json.data && item.json.data[0] && item.json.data[0].url) {\n       urls.push(item.json.data[0].url);\n  } else {\n      urls.push('URL not found');\n  }\n});\n\n// Hardcode fetching from source nodes to be safe about which is which\nconst url1 = $('Gen Model 1 (D3-Natural)').first().json.data[0].url;\nconst url2 = $('Gen Model 2 (D3-Vivid)').first().json.data[0].url;\nconst url3 = $('Gen Model 3 (D2)').first().json.data[0].url;\n\nreturn {\n  json: {\n    images: [\n        { model: 'DALL-E 3 Natural', url: url1 },\n        { model: 'DALL-E 3 Vivid', url: url2 },\n        { model: 'DALL-E 2', url: url3 }\n    ],\n    image_urls: [url1, url2, url3]\n  }\n};"
+      },
+      "id": "prepare-vision-data",
+      "name": "Prepare Vision Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3800,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "generate",
+        "model": "dall-e-3",
+        "prompt": "={{ $json.dalle_prompt }}",
+        "options": {
+          "quality": "hd",
+          "size": "1024x1024",
+          "style": "natural",
+          "n": 1
+        }
+      },
+      "id": "gen-model-1",
+      "name": "Gen Model 1 (DALL-E 3)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        3100,
+        100
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "generate",
+        "model": "dall-e-3",
+        "prompt": "={{ $json.dalle_prompt }}",
+        "options": {
+          "quality": "hd",
+          "size": "1024x1024",
+          "style": "vivid",
+          "n": 1
+        }
+      },
+      "id": "gen-model-2",
+      "name": "Gen Model 2 (GPT-Image-1)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        3100,
+        350
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "generate",
+        "model": "dall-e-2",
+        "prompt": "={{ $json.dalle_prompt }}",
+        "options": {
+          "n": 1,
+          "size": "1024x1024"
+        }
+      },
+      "id": "gen-model-3",
+      "name": "Gen Model 3 (DALL-E 2)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        3100,
+        600
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "id": "merge-images",
+      "name": "Merge Images",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        3400,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract URLs from generation results\nconst items = $input.all();\nconst urls = [];\n\n// Helper to safely get URL\nconst getUrl = (item) => {\n    // DALL-E 3 / Standard structure check\n    if (item.json.data && item.json.data[0] && item.json.data[0].url) return item.json.data[0].url;\n    if (item.json.url) return item.json.url;\n    return 'URL not found';\n};\n\n// Explicitly map from inputs based on merge order (0, 1, 2)\n// Input 0: Model 1 (DALL-E 3)\n// Input 1: Model 2 (GPT-Image-1)\n// Input 2: Model 3 (DALL-E 2)\n\n// Note: $input.all() gives flattened array.\n// We can try accessing by node context if available or rely on index.\n// n8n Merge 'combineAll' puts them in one array.\n\nconst url1 = getUrl(items[0]); // DALL-E 3\nconst url2 = getUrl(items[1]); // GPT-Image-1\nconst url3 = getUrl(items[2]); // DALL-E 2\n\nreturn {\n  json: {\n    images: [\n        { model: 'DALL-E 3', url: url1 },\n        { model: 'GPT-Image-1', url: url2 },\n        { model: 'DALL-E 2', url: url3 }\n    ]\n  }\n};"
+      },
+      "id": "prepare-vision-data",
+      "name": "Prepare Vision Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3600,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "content": "You are a product quality inspector. Compare these 3 AI-generated images against customer complaints.\n\nTask:\n1. Analyze each image URL provided.\n2. Score each (1-10) on how well it visually depicts the described discrepancies.\n3. Provide a detailed comparative analysis.\n\nOutput JSON:\n{\n  \"analysis\": [\n    {\"model\": \"DALL-E 3\", \"score\": number, \"notes\": \"string\"},\n    {\"model\": \"GPT-Image-1\", \"score\": number, \"notes\": \"string\"},\n    {\"model\": \"DALL-E 2\", \"score\": number, \"notes\": \"string\"}\n  ],\n  \"best_model\": \"string\",\n  \"detailed_summary\": \"string\"\n}",
+              "role": "system"
+            },
+            {
+              "content": "=Discrepancies: {{ $('Aggregate All Sentiments').first().json.discrepancy_details.join(', ') }}\n\nImages:\n1. DALL-E 3: {{ $json.images[0].url }}\n2. GPT-Image-1: {{ $json.images[1].url }}\n3. DALL-E 2: {{ $json.images[2].url }}\n\nAnalyze them.",
+              "role": "user"
+            }
+          ]
+        },
+        "jsonOutput": true
+      },
+      "id": "llm-vision-judge",
+      "name": "LLM Vision Judge",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        3800,
+        350
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format data for Sheets\nconst aggregatedData = $('Aggregate All Sentiments').first().json;\nconst visionData = $('Prepare Vision Data').first().json;\nconst analysis = $input.first().json;\n\nconst getScore = (idx) => analysis.analysis && analysis.analysis[idx] ? analysis.analysis[idx].score : 'N/A';\n\nreturn {\n  json: {\n    asin: aggregatedData.asin,\n    product_title: aggregatedData.product.title,\n    \n    overall_sentiment: aggregatedData.overall_sentiment,\n    discrepancy_details: aggregatedData.discrepancy_details.join(' | '),\n    \n    // Image 1\n    img1_model: 'DALL-E 3',\n    img1_url: visionData.images[0].url,\n    img1_score: getScore(0),\n    \n    // Image 2\n    img2_model: 'GPT-Image-1',\n    img2_url: visionData.images[1].url,\n    img2_score: getScore(1),\n    \n    // Image 3\n    img3_model: 'DALL-E 2',\n    img3_url: visionData.images[2].url,\n    img3_score: getScore(2),\n    \n    best_model: analysis.best_model,\n    vision_summary: analysis.detailed_summary,\n    analyzed_at: new Date().toISOString()\n  }\n};"
+      },
+      "id": "format-final-data",
+      "name": "Format Final Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4000,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.OUTPUT_SHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Analysis Results"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ASIN": "={{ $json.asin }}",
+            "Product": "={{ $json.product_title }}",
+            "Sentiment": "={{ $json.overall_sentiment }}",
+            "Discrepancies": "={{ $json.discrepancy_details }}",
+            "DALL-E 3 URL": "={{ $json.img1_url }}",
+            "DALL-E 3 Score": "={{ $json.img1_score }}",
+            "GPT-Image-1 URL": "={{ $json.img2_url }}",
+            "GPT-Image-1 Score": "={{ $json.img2_score }}",
+            "DALL-E 2 URL": "={{ $json.img3_url }}",
+            "DALL-E 2 Score": "={{ $json.img3_score }}",
+            "Best Model": "={{ $json.best_model }}",
+            "Analysis": "={{ $json.vision_summary }}",
+            "Date": "={{ $json.analyzed_at }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-to-sheets",
+      "name": "Save Analysis to Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        4200,
+        350
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "console.log('Analysis Saved to Sheets');\nreturn { json: $json };"
+      },
+      "id": "final-output",
+      "name": "Final Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4400,
+        350
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Products CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Products CSV": {
+      "main": [
+        [
+          {
+            "node": "Select Random ASIN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Random ASIN": {
+      "main": [
+        [
+          {
+            "node": "Read Reviews CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Reviews CSV": {
+      "main": [
+        [
+          {
+            "node": "Join Reviews by ASIN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Join Reviews by ASIN": {
+      "main": [
+        [
+          {
+            "node": "Has Reviews?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Reviews?": {
+      "main": [
+        [
+          {
+            "node": "Split Reviews",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Re-randomize ASIN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-randomize ASIN": {
+      "main": [
+        [
+          {
+            "node": "Read Reviews CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Reviews": {
+      "main": [
+        [
+          {
+            "node": "Sentiment Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sentiment Analysis": {
+      "main": [
+        [
+          {
+            "node": "Parse Sentiment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Sentiment": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Sentiments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Sentiments": {
+      "main": [
+        [
+          {
+            "node": "Generate Images?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Images?": {
+      "main": [
+        [
+          {
+            "node": "Generate Image Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Generate Image Prompt": {
+      "main": [
+        []
+      ]
+    },
+    "Save Analysis to Sheets": {
+      "main": [
+        [
+          {
+            "node": "Final Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Vision Data": {
+      "main": [
+        [
+          {
+            "node": "LLM Vision Judge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Vision Judge": {
+      "main": [
+        [
+          {
+            "node": "Format Final Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse DALL-E Prompt": {
+      "main": [
+        [
+          {
+            "node": "Gen Model 1 (DALL-E 3)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gen Model 2 (GPT-Image-1)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gen Model 3 (DALL-E 2)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gen Model 1 (DALL-E 3)": {
+      "main": [
+        [
+          {
+            "node": "Merge Images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gen Model 2 (GPT-Image-1)": {
+      "main": [
+        [
+          {
+            "node": "Merge Images",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Gen Model 3 (DALL-E 2)": {
+      "main": [
+        [
+          {
+            "node": "Merge Images",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge Images": {
+      "main": [
+        [
+          {
+            "node": "Prepare Vision Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Final Data": {
+      "main": [
+        [
+          {
+            "node": "Save Analysis to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": {},
+  "tags": [
+    {
+      "name": "seller-optimization-v3",
+      "id": "1"
+    }
+  ],
+  "pinData": {}
+}
