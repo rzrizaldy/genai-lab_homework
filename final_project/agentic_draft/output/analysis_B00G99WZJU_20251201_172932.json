@@ -1,0 +1,193 @@
+{
+  "asin": "B00G99WZJU",
+  "product_title": "Hanes Men's Tagless Boxer Underwear, Exposed Waistband, Multi-packs Available",
+  "sentiment": {
+    "overall_sentiment": "positive",
+    "avg_score": 0.81,
+    "review_count_analyzed": 10,
+    "discrepancies": [
+      "The size chart did not match the actual size, leading to an incorrect fit."
+    ],
+    "individual_sentiments": [
+      {
+        "sentiment": "positive",
+        "sentiment_score": 0.9,
+        "emotional_tone": "satisfaction",
+        "visual_discrepancy_found": false,
+        "discrepancy_details": null
+      },
+      {
+        "sentiment": "positive",
+        "sentiment_score": 0.9,
+        "emotional_tone": "humorous and satisfied",
+        "visual_discrepancy_found": false,
+        "discrepancy_details": null
+      },
+      {
+        "sentiment": "positive",
+        "sentiment_score": 0.9,
+        "emotional_tone": "satisfied",
+        "visual_discrepancy_found": false,
+        "discrepancy_details": null
+      },
+      {
+        "sentiment": "positive",
+        "sentiment_score": 0.8,
+        "emotional_tone": "satisfied",
+        "visual_discrepancy_found": false,
+        "discrepancy_details": "None"
+      },
+      {
+        "sentiment": "positive",
+        "sentiment_score": 0.9,
+        "emotional_tone": "satisfied",
+        "visual_discrepancy_found": false,
+        "discrepancy_details": null
+      },
+      {
+        "sentiment": "positive",
+        "sentiment_score": 0.9,
+        "emotional_tone": "satisfaction",
+        "visual_discrepancy_found": false,
+        "discrepancy_details": null
+      },
+      {
+        "sentiment": "positive",
+        "sentiment_score": 0.9,
+        "emotional_tone": "satisfied",
+        "visual_discrepancy_found": false,
+        "discrepancy_details": null
+      },
+      {
+        "sentiment": "mixed",
+        "sentiment_score": 0.2,
+        "emotional_tone": "frustration and satisfaction",
+        "visual_discrepancy_found": true,
+        "discrepancy_details": "The size chart did not match the actual size, leading to an incorrect fit."
+      },
+      {
+        "sentiment": "positive",
+        "sentiment_score": 0.9,
+        "emotional_tone": "satisfied",
+        "visual_discrepancy_found": false,
+        "discrepancy_details": null
+      },
+      {
+        "sentiment": "positive",
+        "sentiment_score": 0.8,
+        "emotional_tone": "satisfied",
+        "visual_discrepancy_found": false,
+        "discrepancy_details": "None"
+      }
+    ]
+  },
+  "dalle_prompt": "Professional e-commerce product photography of Hanes Men's Tagless Boxer Underwear, featuring an exposed waistband. The photo should be taken from a slightly tilted angle to emphasize the waistband and the fit, highlighting the discrepancy between the size chart and actual size. Use a clean white background with soft gradient, ensuring professional lighting to enhance texture and detail. No human models, focus solely on the product, aiming for a photorealistic, high-end commercial look.",
+  "images": [
+    {
+      "model": "DALL-E 3",
+      "error": "Error code: 400 - {'error': {'message': 'Your request was rejected as a result of our safety system. Image descriptions generated from your prompt may contain text that is not allowed by our safety system. If you believe this was done in error, your request may succeed if retried, or by adjusting your prompt.', 'type': 'image_generation_user_error', 'param': None, 'code': 'content_policy_violation'}}"
+    },
+    {
+      "model": "DALL-E 2",
+      "error": "Error code: 400 - {'error': {'message': 'Your request was rejected as a result of our safety system. Your prompt may contain text that is not allowed by our safety system.', 'type': 'image_generation_user_error', 'param': None, 'code': 'content_policy_violation'}}"
+    }
+  ],
+  "vision_analysis": {
+    "error": "Not enough images to compare"
+  },
+  "workflow_steps": [
+    {
+      "step": 1,
+      "name": "Selecting Random Product",
+      "status": "running",
+      "timestamp": "2025-12-01T17:29:05.878128",
+      "data": {}
+    },
+    {
+      "step": 2,
+      "name": "Selecting Random Product",
+      "status": "completed",
+      "timestamp": "2025-12-01T17:29:05.880829",
+      "data": {
+        "asin": "B00G99WZJU",
+        "title": "Hanes Men's Tagless Boxer Underwear, Exposed Waist...",
+        "review_count": 10,
+        "attempts": 1
+      }
+    },
+    {
+      "step": 3,
+      "name": "Analyzing Sentiment",
+      "status": "running",
+      "timestamp": "2025-12-01T17:29:05.880903",
+      "data": {}
+    },
+    {
+      "step": 4,
+      "name": "Analyzing Sentiment",
+      "status": "completed",
+      "timestamp": "2025-12-01T17:29:20.675923",
+      "data": {
+        "overall": "positive",
+        "avg_score": 0.81,
+        "discrepancy_count": 1
+      }
+    },
+    {
+      "step": 5,
+      "name": "Generating Image Prompt",
+      "status": "running",
+      "timestamp": "2025-12-01T17:29:20.676126",
+      "data": {}
+    },
+    {
+      "step": 6,
+      "name": "Generating Image Prompt",
+      "status": "completed",
+      "timestamp": "2025-12-01T17:29:23.255343",
+      "data": {
+        "prompt_length": 491
+      }
+    },
+    {
+      "step": 7,
+      "name": "Generating Images",
+      "status": "running",
+      "timestamp": "2025-12-01T17:29:23.255456",
+      "data": {}
+    },
+    {
+      "step": 8,
+      "name": "Generating Images",
+      "status": "completed",
+      "timestamp": "2025-12-01T17:29:32.039836",
+      "data": {
+        "images_generated": 0
+      }
+    },
+    {
+      "step": 9,
+      "name": "Analyzing Images with Vision",
+      "status": "running",
+      "timestamp": "2025-12-01T17:29:32.040347",
+      "data": {}
+    },
+    {
+      "step": 10,
+      "name": "Analyzing Images with Vision",
+      "status": "completed",
+      "timestamp": "2025-12-01T17:29:32.040356",
+      "data": {
+        "error": "Not enough images"
+      }
+    },
+    {
+      "step": 11,
+      "name": "Saving Results",
+      "status": "running",
+      "timestamp": "2025-12-01T17:29:32.040384",
+      "data": {}
+    }
+  ],
+  "analyzed_at": "2025-12-01T17:29:32.040409"
+}

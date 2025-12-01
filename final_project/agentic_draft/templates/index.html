@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seller Quality Optimizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #1a1a1a;
+            --bg-node: #262626;
+            --bg-card: #2d2d2d;
+            --accent-orange: #ff6d5a;
+            --accent-brown: #c4a35a;
+            --accent-green: #5fb870;
+            --accent-blue: #5b9bd5;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666;
+            --border: #404040;
+            --node-connector: #555;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-brown));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .run-btn {
+            padding: 0.75rem 1.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            font-family: inherit;
+            background: linear-gradient(135deg, var(--accent-orange), #e55a4a);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .run-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 109, 90, 0.3);
+        }
+
+        .run-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Pipeline Section */
+        .pipeline-section {
+            background: var(--bg-node);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Flowchart Pipeline */
+        .pipeline {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            overflow-x: auto;
+            padding: 1rem 0;
+        }
+
+        .node {
+            min-width: 160px;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .node.pending {
+            opacity: 0.5;
+        }
+
+        .node.running {
+            border-color: var(--accent-orange);
+            box-shadow: 0 0 20px rgba(255, 109, 90, 0.3);
+            animation: pulse-border 1.5s infinite;
+        }
+
+        .node.completed {
+            border-color: var(--accent-green);
+        }
+
+        .node.failed {
+            border-color: #e74c3c;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 10px rgba(255, 109, 90, 0.3); }
+            50% { box-shadow: 0 0 25px rgba(255, 109, 90, 0.5); }
+        }
+
+        .node-icon {
+            width: 36px;
+            height: 36px;
+            margin: 0 auto 0.5rem;
+            background: var(--bg-dark);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .node.running .node-icon {
+            background: var(--accent-orange);
+        }
+
+        .node.completed .node-icon {
+            background: var(--accent-green);
+        }
+
+        .node-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .node-status {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .node-detail {
+            font-size: 0.65rem;
+            color: var(--accent-brown);
+            margin-top: 0.25rem;
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .connector {
+            width: 40px;
+            height: 2px;
+            background: var(--node-connector);
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .connector::after {
+            content: '';
+            position: absolute;
+            right: -4px;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid var(--node-connector);
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+        }
+
+        .connector.active {
+            background: var(--accent-green);
+        }
+
+        .connector.active::after {
+            border-left-color: var(--accent-green);
+        }
+
+        /* Logs Section */
+        .logs-section {
+            background: var(--bg-node);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border);
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+
+        .log-time {
+            color: var(--text-muted);
+            flex-shrink: 0;
+            min-width: 70px;
+        }
+
+        .log-level {
+            padding: 0.15rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            flex-shrink: 0;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .log-level.info { background: var(--accent-blue); color: white; }
+        .log-level.success { background: var(--accent-green); color: white; }
+        .log-level.running { background: var(--accent-orange); color: white; }
+        .log-level.error { background: #e74c3c; color: white; }
+        .log-level.data { background: var(--accent-brown); color: white; }
+
+        .log-message {
+            color: var(--text-secondary);
+            flex: 1;
+        }
+
+        .log-data {
+            color: var(--accent-brown);
+            font-size: 0.7rem;
+            margin-top: 0.25rem;
+            padding-left: 1rem;
+            border-left: 2px solid var(--border);
+        }
+
+        /* Results Grid */
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .results-grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .result-card {
+            background: var(--bg-node);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .result-card h3 {
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            color: var(--accent-brown);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Word Cloud */
+        .word-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+            align-items: center;
+            min-height: 120px;
+            padding: 1rem;
+        }
+
+        .word-tag {
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            transition: transform 0.2s;
+        }
+
+        .word-tag:hover {
+            transform: scale(1.1);
+        }
+
+        .word-tag.positive {
+            background: rgba(95, 184, 112, 0.2);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+        }
+
+        .word-tag.negative {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+            border: 1px solid #e74c3c;
+        }
+
+        .word-tag.neutral {
+            background: rgba(91, 155, 213, 0.2);
+            color: var(--accent-blue);
+            border: 1px solid var(--accent-blue);
+        }
+
+        .word-tag.size-lg { font-size: 1rem; padding: 0.4rem 0.8rem; }
+        .word-tag.size-md { font-size: 0.85rem; }
+        .word-tag.size-sm { font-size: 0.7rem; opacity: 0.8; }
+
+        /* Discrepancy Snippets */
+        .discrepancy-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .discrepancy-item {
+            background: var(--bg-card);
+            padding: 0.75rem;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent-orange);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .discrepancy-item::before {
+            content: '⚠️';
+            margin-right: 0.5rem;
+        }
+
+        /* Image Cards */
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .image-card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 280px;
+            object-fit: contain;
+            background: #1a1a1a;
+        }
+
+        .image-info {
+            padding: 1rem;
+        }
+
+        .image-model {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .winner-badge {
+            background: var(--accent-green);
+            color: white;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+
+        .score-display {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .score-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-brown);
+        }
+
+        .score-bar-container {
+            flex: 1;
+            height: 8px;
+            background: var(--bg-dark);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .score-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-orange), var(--accent-brown));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        .data-table th {
+            background: var(--bg-dark);
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-brown);
+            border-bottom: 2px solid var(--border);
+        }
+
+        .data-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .data-table tr:hover td {
+            background: var(--bg-card);
+        }
+
+        /* Product Info */
+        .product-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .info-item {
+            background: var(--bg-card);
+            padding: 0.75rem;
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 0.2rem;
+        }
+
+        .info-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .sentiment-positive { color: var(--accent-green); }
+        .sentiment-negative { color: #e74c3c; }
+        .sentiment-mixed { color: var(--accent-orange); }
+
+        /* Analysis Box */
+        .analysis-box {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            border-left: 3px solid var(--accent-brown);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        .hidden { display: none !important; }
+
+        @media (max-width: 1200px) {
+            .results-grid { grid-template-columns: 1fr; }
+            .results-grid-3 { grid-template-columns: 1fr; }
+            .images-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">⚡</div>
+                <h1>Seller Quality Optimizer</h1>
+            </div>
+            <button class="run-btn" id="runBtn" onclick="runWorkflow()">
+                <span>▶</span> Execute Workflow
+            </button>
+        </header>
+
+        <!-- Pipeline Flowchart -->
+        <div class="pipeline-section">
+            <div class="section-title">📊 Workflow Pipeline</div>
+            <div class="pipeline" id="pipeline">
+                <div class="node pending" data-step="1" id="node-1">
+                    <div class="node-icon">🎲</div>
+                    <div class="node-title">Select Product</div>
+                    <div class="node-status">pending</div>
+                    <div class="node-detail" id="node-1-detail"></div>
+                </div>
+                <div class="connector" id="conn-1"></div>
+                <div class="node pending" data-step="2" id="node-2">
+                    <div class="node-icon">📊</div>
+                    <div class="node-title">Sentiment Analysis</div>
+                    <div class="node-status">pending</div>
+                    <div class="node-detail" id="node-2-detail"></div>
+                </div>
+                <div class="connector" id="conn-2"></div>
+                <div class="node pending" data-step="3" id="node-3">
+                    <div class="node-icon">✍️</div>
+                    <div class="node-title">Generate Prompt</div>
+                    <div class="node-status">pending</div>
+                    <div class="node-detail" id="node-3-detail"></div>
+                </div>
+                <div class="connector" id="conn-3"></div>
+                <div class="node pending" data-step="4" id="node-4">
+                    <div class="node-icon">🎨</div>
+                    <div class="node-title">Generate Images</div>
+                    <div class="node-status">pending</div>
+                    <div class="node-detail" id="node-4-detail"></div>
+                </div>
+                <div class="connector" id="conn-4"></div>
+                <div class="node pending" data-step="5" id="node-5">
+                    <div class="node-icon">👁️</div>
+                    <div class="node-title">Vision Analysis</div>
+                    <div class="node-status">pending</div>
+                    <div class="node-detail" id="node-5-detail"></div>
+                </div>
+                <div class="connector" id="conn-5"></div>
+                <div class="node pending" data-step="6" id="node-6">
+                    <div class="node-icon">💾</div>
+                    <div class="node-title">Save Results</div>
+                    <div class="node-status">pending</div>
+                    <div class="node-detail" id="node-6-detail"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs -->
+        <div class="logs-section">
+            <div class="section-title">📝 Execution Log</div>
+            <div id="logsContainer">
+                <div class="log-entry">
+                    <span class="log-time">--:--:--</span>
+                    <span class="log-level info">INFO</span>
+                    <span class="log-message">Ready to execute workflow. Click "Execute Workflow" to start.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="resultsSection" class="hidden">
+            <!-- Product & Sentiment & Word Cloud -->
+            <div class="results-grid-3">
+                <div class="result-card">
+                    <h3>📦 Selected Product</h3>
+                    <div class="product-info" id="productInfo"></div>
+                </div>
+                <div class="result-card">
+                    <h3>📊 Sentiment Summary</h3>
+                    <div class="product-info" id="sentimentInfo"></div>
+                </div>
+                <div class="result-card">
+                    <h3>☁️ Sentiment Word Cloud</h3>
+                    <div class="word-cloud" id="wordCloud"></div>
+                </div>
+            </div>
+
+            <!-- Discrepancies -->
+            <div class="result-card" style="margin-bottom: 1.5rem;">
+                <h3>⚠️ Customer Complaints & Discrepancies</h3>
+                <div class="discrepancy-list" id="discrepancyList"></div>
+            </div>
+
+            <!-- Generated Images -->
+            <div class="result-card" style="margin-bottom: 1.5rem;">
+                <h3>🎨 Generated Product Images (DALL-E 3 vs DALL-E 2)</h3>
+                <div class="images-grid" id="imagesGrid"></div>
+            </div>
+
+            <!-- Vision Analysis -->
+            <div class="result-card" style="margin-bottom: 1.5rem;">
+                <h3>🔍 Vision Analysis Summary</h3>
+                <div class="analysis-box" id="visionSummary"></div>
+            </div>
+
+            <!-- CSV Table -->
+            <div class="result-card">
+                <h3>📋 Analysis History</h3>
+                <div style="overflow-x: auto;">
+                    <table class="data-table" id="csvTable">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isRunning = false;
+
+        // Sentiment keywords for word cloud
+        const sentimentKeywords = {
+            positive: ['quality', 'comfortable', 'perfect', 'love', 'great', 'excellent', 'amazing', 'soft', 'fits', 'recommend', 'happy', 'satisfied', 'durable', 'worth', 'beautiful'],
+            negative: ['poor', 'cheap', 'broke', 'disappointed', 'wrong', 'shrink', 'faded', 'uncomfortable', 'small', 'large', 'defective', 'returned', 'waste', 'terrible'],
+            neutral: ['okay', 'average', 'expected', 'decent', 'fine', 'normal', 'standard']
+        };
+
+        function getTime() {
+            return new Date().toTimeString().split(' ')[0];
+        }
+
+        function addLog(level, message, data = null) {
+            const container = document.getElementById('logsContainer');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            let html = `
+                <span class="log-time">${getTime()}</span>
+                <span class="log-level ${level}">${level.toUpperCase()}</span>
+                <span class="log-message">${message}</span>
+            `;
+            
+            entry.innerHTML = html;
+            
+            if (data) {
+                const dataDiv = document.createElement('div');
+                dataDiv.className = 'log-data';
+                if (typeof data === 'object') {
+                    const items = [];
+                    for (const [k, v] of Object.entries(data)) {
+                        if (v !== null && v !== undefined && k !== 'prompt_preview') {
+                            items.push(`${k}: ${typeof v === 'string' ? v.substring(0, 50) : v}`);
+                        }
+                    }
+                    dataDiv.textContent = items.join(' | ');
+                } else {
+                    dataDiv.textContent = data;
+                }
+                entry.appendChild(dataDiv);
+            }
+            
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateNode(step, status, statusText, detail = '') {
+            const node = document.getElementById(`node-${step}`);
+            if (!node) return;
+            
+            node.classList.remove('pending', 'running', 'completed', 'failed');
+            node.classList.add(status);
+            node.querySelector('.node-status').textContent = statusText || status;
+            
+            const detailEl = document.getElementById(`node-${step}-detail`);
+            if (detailEl && detail) {
+                detailEl.textContent = detail;
+                detailEl.title = detail;
+            }
+            
+            if (status === 'completed' && step < 6) {
+                const conn = document.getElementById(`conn-${step}`);
+                if (conn) conn.classList.add('active');
+            }
+        }
+
+        function resetPipeline() {
+            for (let i = 1; i <= 6; i++) {
+                const node = document.getElementById(`node-${i}`);
+                node.classList.remove('running', 'completed', 'failed');
+                node.classList.add('pending');
+                node.querySelector('.node-status').textContent = 'pending';
+                
+                const detailEl = document.getElementById(`node-${i}-detail`);
+                if (detailEl) detailEl.textContent = '';
+                
+                const conn = document.getElementById(`conn-${i}`);
+                if (conn) conn.classList.remove('active');
+            }
+            document.getElementById('logsContainer').innerHTML = '';
+        }
+
+        async function runWorkflow() {
+            if (isRunning) return;
+            
+            isRunning = true;
+            const btn = document.getElementById('runBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> Running...';
+
+            resetPipeline();
+            document.getElementById('resultsSection').classList.add('hidden');
+
+            addLog('info', 'Starting workflow execution...');
+
+            try {
+                const response = await fetch('/api/run', { method: 'POST' });
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                let buffer = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                handleProgressUpdate(data);
+                            } catch (e) {
+                                console.log('Parse error:', e, line);
+                            }
+                        }
+                    }
+                }
+                
+            } catch (err) {
+                addLog('error', `Error: ${err.message}`);
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<span>▶</span> Execute Workflow';
+            isRunning = false;
+        }
+
+        function handleProgressUpdate(data) {
+            console.log('Progress:', data);
+            
+            if (data.type === 'step') {
+                const step = data.step;
+                const status = data.status;
+                
+                if (status === 'running') {
+                    updateNode(step, 'running', 'running...');
+                    addLog('running', data.message);
+                } else if (status === 'completed') {
+                    let detail = '';
+                    if (data.data) {
+                        if (data.data.asin) detail = data.data.asin;
+                        else if (data.data.overall) detail = `${data.data.overall} (${data.data.score})`;
+                        else if (data.data.images) detail = `${data.data.images.length} images`;
+                        else if (data.data.best_image) detail = `Best: #${data.data.best_image}`;
+                    }
+                    
+                    updateNode(step, 'completed', 'done', detail);
+                    addLog('success', data.message, data.data);
+                }
+            } else if (data.type === 'complete') {
+                addLog('success', '✅ Workflow completed successfully!');
+                displayResults(data);
+                loadCSVData();
+            } else if (data.type === 'error') {
+                addLog('error', `Error: ${data.error}`);
+            }
+        }
+
+        function generateWordCloud(sentiment, discrepancies) {
+            const container = document.getElementById('wordCloud');
+            container.innerHTML = '';
+            
+            const overall = sentiment.overall_sentiment || 'mixed';
+            const score = sentiment.avg_score || 0;
+            
+            // Select keywords based on sentiment
+            let keywords = [];
+            if (score > 0.3) {
+                keywords = [...sentimentKeywords.positive.slice(0, 8)];
+            } else if (score < -0.3) {
+                keywords = [...sentimentKeywords.negative.slice(0, 8)];
+            } else {
+                keywords = [...sentimentKeywords.positive.slice(0, 4), ...sentimentKeywords.negative.slice(0, 4)];
+            }
+            
+            // Add some words from discrepancies
+            if (discrepancies && discrepancies.length > 0) {
+                discrepancies.forEach(d => {
+                    const words = d.toLowerCase().split(' ').filter(w => w.length > 4);
+                    keywords.push(...words.slice(0, 2));
+                });
+            }
+            
+            // Shuffle and limit
+            keywords = [...new Set(keywords)].sort(() => Math.random() - 0.5).slice(0, 15);
+            
+            keywords.forEach((word, idx) => {
+                const tag = document.createElement('span');
+                tag.className = 'word-tag';
+                
+                // Determine sentiment class
+                if (sentimentKeywords.positive.includes(word)) {
+                    tag.classList.add('positive');
+                } else if (sentimentKeywords.negative.includes(word)) {
+                    tag.classList.add('negative');
+                } else {
+                    tag.classList.add('neutral');
+                }
+                
+                // Size variation
+                if (idx < 3) tag.classList.add('size-lg');
+                else if (idx < 8) tag.classList.add('size-md');
+                else tag.classList.add('size-sm');
+                
+                tag.textContent = word;
+                container.appendChild(tag);
+            });
+        }
+
+        function displayDiscrepancies(discrepancies) {
+            const container = document.getElementById('discrepancyList');
+            
+            if (!discrepancies || discrepancies.length === 0) {
+                container.innerHTML = '<div class="discrepancy-item" style="border-left-color: var(--accent-green);">✅ No major discrepancies found in customer reviews.</div>';
+                return;
+            }
+            
+            container.innerHTML = discrepancies.map(d => 
+                `<div class="discrepancy-item">${d}</div>`
+            ).join('');
+        }
+
+        function displayResults(data) {
+            const result = data.result;
+            const product = result.product || {};
+            const sentiment = result.sentiment_analysis || {};
+            const images = result.generated_images || [];
+            const vision = result.vision_analysis || {};
+
+            document.getElementById('resultsSection').classList.remove('hidden');
+
+            // Product Info
+            document.getElementById('productInfo').innerHTML = `
+                <div class="info-item">
+                    <div class="info-label">ASIN</div>
+                    <div class="info-value">${product.asin || 'N/A'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Title</div>
+                    <div class="info-value">${(product.title || 'N/A').substring(0, 40)}...</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Brand</div>
+                    <div class="info-value">${product.brand || 'N/A'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Rating</div>
+                    <div class="info-value">${product.rating || 'N/A'}</div>
+                </div>
+            `;
+
+            // Sentiment Info
+            const sentimentClass = sentiment.overall_sentiment === 'positive' ? 'sentiment-positive' : 
+                                   sentiment.overall_sentiment === 'negative' ? 'sentiment-negative' : 'sentiment-mixed';
+            document.getElementById('sentimentInfo').innerHTML = `
+                <div class="info-item">
+                    <div class="info-label">Overall</div>
+                    <div class="info-value ${sentimentClass}">${sentiment.overall_sentiment || 'N/A'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Score</div>
+                    <div class="info-value">${sentiment.avg_score || 0}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Reviews</div>
+                    <div class="info-value">${sentiment.review_count_analyzed || 0}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Issues</div>
+                    <div class="info-value">${(sentiment.discrepancies || []).length}</div>
+                </div>
+            `;
+
+            // Word Cloud
+            generateWordCloud(sentiment, sentiment.discrepancies);
+            
+            // Discrepancies
+            displayDiscrepancies(sentiment.discrepancies);
+
+            // Images
+            let imagesHtml = '';
+            images.forEach((img, idx) => {
+                if (img.filename) {
+                    const isWinner = vision.best_image === (idx + 1);
+                    const score = idx === 0 ? vision.image1_score : vision.image2_score;
+                    const notes = idx === 0 ? vision.image1_notes : vision.image2_notes;
+                    imagesHtml += `
+                        <div class="image-card">
+                            <img src="/images/${img.filename}" alt="${img.model}">
+                            <div class="image-info">
+                                <div class="image-model">
+                                    ${img.model}
+                                    ${isWinner ? '<span class="winner-badge">WINNER</span>' : ''}
+                                </div>
+                                <div class="score-display">
+                                    <span class="score-value">${score || 'N/A'}</span>
+                                    <div class="score-bar-container">
+                                        <div class="score-bar" style="width: ${(score || 0) * 10}%"></div>
+                                    </div>
+                                    <span style="color: var(--text-muted); font-size: 0.8rem;">/10</span>
+                                </div>
+                                ${notes ? `<p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">${notes}</p>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            document.getElementById('imagesGrid').innerHTML = imagesHtml || '<p>No images generated</p>';
+
+            // Vision Summary
+            document.getElementById('visionSummary').textContent = vision.summary || vision.error || 'No analysis available';
+        }
+
+        async function loadCSVData() {
+            try {
+                const response = await fetch('/api/csv');
+                const data = await response.json();
+                
+                if (data.length > 0) {
+                    const displayHeaders = ['asin', 'product_title', 'overall_sentiment', 'avg_sentiment_score', 'best_image', 'analyzed_at'];
+                    
+                    let headerHtml = '<tr>';
+                    displayHeaders.forEach(h => {
+                        headerHtml += `<th>${h.replace(/_/g, ' ')}</th>`;
+                    });
+                    headerHtml += '</tr>';
+                    
+                    let bodyHtml = '';
+                    data.slice(-5).reverse().forEach(row => {
+                        bodyHtml += '<tr>';
+                        displayHeaders.forEach(h => {
+                            let val = row[h] || '';
+                            if (h === 'product_title') val = val.substring(0, 30) + '...';
+                            if (h === 'analyzed_at') val = val.split('T')[0];
+                            bodyHtml += `<td>${val}</td>`;
+                        });
+                        bodyHtml += '</tr>';
+                    });
+                    
+                    document.querySelector('#csvTable thead').innerHTML = headerHtml;
+                    document.querySelector('#csvTable tbody').innerHTML = bodyHtml;
+                }
+            } catch (err) {
+                console.log('No CSV data yet');
+            }
+        }
+
+        // Load CSV on page load
+        loadCSVData();
+    </script>
+</body>
+</html>

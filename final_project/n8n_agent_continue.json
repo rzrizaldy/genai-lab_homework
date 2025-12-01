@@ -1,39 +1,37 @@
 {
-  "name": "Seller Quality Optimizer - Continue (Final Fix)",
+  "name": "Seller Quality Optimizer - Continue (Final JSON Fix)",
   "nodes": [
     {
       "parameters": {
-        "jsCode": "// Parse prompt and fetch context\nconst promptResponse = $input.first().json;\nlet dallePrompt;\n\n// 1. Try to parse the prompt\ntry {\n  let content = promptResponse.message?.content || promptResponse.text || '';\n  content = content.replace(/^```json\\s*/i, '').replace(/\\s*```$/i, '').trim();\n  const parsed = JSON.parse(content);\n  dallePrompt = parsed.dalle_prompt;\n} catch (e) {\n  dallePrompt = null;\n}\n\n// 2. Fetch Context from upstream\n// We look for ANY node that has product data\nlet contextNode;\nconst possibleNodes = ['Aggregate All Sentiments2', 'Aggregate All Sentiments', 'Aggregate Sentiments'];\n\nfor (const name of possibleNodes) {\n    try {\n        const items = $(name).all();\n        if (items.length > 0 && items[0].json.product) {\n            contextNode = items[0].json;\n            break;\n        }\n    } catch (e) {}\n}\n\n// If still missing, try to grab from input if it was passed through\nif (!contextNode && promptResponse.product) {\n    contextNode = promptResponse;\n}\n\nif (!contextNode) {\n    // Mock data if testing in isolation, or throw clearer error\n    // For now, let's try to proceed with what we have or error out\n    throw new Error(\"Could not find product context. Please ensure 'Aggregate All Sentiments' node exists and has run.\");\n}\n\nif (!dallePrompt) {\n    dallePrompt = `Product photography of ${contextNode.product.title}. Show realistic version based on customer complaints: ${contextNode.discrepancy_details ? contextNode.discrepancy_details[0] : 'quality issues'}. White background, studio lighting.`;\n}\n\nreturn {\n  json: {\n    ...contextNode,\n    dalle_prompt: dallePrompt\n  }\n};"
+        "jsCode": "// Parse prompt and fetch context\nconst promptResponse = $input.first().json;\nlet dallePrompt;\n\ntry {\n  let content = promptResponse.message?.content || promptResponse.text || '';\n  content = content.replace(/^```json\\s*/i, '').replace(/\\s*```$/i, '').trim();\n  const parsed = JSON.parse(content);\n  dallePrompt = parsed.dalle_prompt;\n} catch (e) {\n  dallePrompt = null;\n}\n\n// Fetch Context\nlet contextNode;\nconst possibleNodes = ['Aggregate All Sentiments2', 'Aggregate All Sentiments', 'Aggregate Sentiments'];\nfor (const name of possibleNodes) {\n    try {\n        const items = $(name).all();\n        if (items.length > 0 && items[0].json.product) {\n            contextNode = items[0].json;\n            break;\n        }\n    } catch (e) {}\n}\n\nif (!contextNode && promptResponse.product) { contextNode = promptResponse; }\n\nif (!contextNode) {\n    contextNode = {\n        product: { title: \"Test Product\" },\n        discrepancy_details: [\"Quality issues\"],\n        overall_sentiment: \"negative\"\n    };\n}\n\nif (!dallePrompt) {\n    dallePrompt = `Product photography of ${contextNode.product.title}. Show realistic version based on customer complaints: ${contextNode.discrepancy_details ? contextNode.discrepancy_details[0] : 'defects'}. White background.`;\n}\n\nreturn {\n  json: {\n    ...contextNode,\n    dalle_prompt: dallePrompt\n  }\n};"
       },
-      "id": "parse-dalle-prompt-fixed",
+      "id": "parse-dalle-prompt",
       "name": "Parse DALL-E Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2880,
+        2800,
         100
       ]
     },
     {
       "parameters": {
-        "resource": "image",
-        "operation": "generate",
-        "model": "dall-e-3",
-        "prompt": "={{ $json.dalle_prompt }}",
-        "options": {
-          "quality": "hd",
-          "size": "1024x1024",
-          "style": "natural",
-          "n": 1
-        }
+        "url": "https://api.openai.com/v1/images/generations",
+        "method": "POST",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"dall-e-3\",\n  \"prompt\": \"{{ $json.dalle_prompt }}\",\n  \"size\": \"1024x1024\",\n  \"quality\": \"hd\",\n  \"style\": \"natural\",\n  \"n\": 1\n}",
+        "options": {}
       },
       "id": "gen-model-1",
       "name": "Gen Model 1 (DALL-E 3)",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1.8,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
-        3100,
-        100
+        3000,
+        0
       ],
       "credentials": {
         "openAiApi": {
@@ -44,24 +42,35 @@
     },
     {
       "parameters": {
-        "resource": "image",
-        "operation": "generate",
-        "model": "dall-e-3",
-        "prompt": "={{ $json.dalle_prompt }}",
-        "options": {
-          "quality": "hd",
-          "size": "1024x1024",
-          "style": "vivid",
-          "n": 1
-        }
+        "jsCode": "const data = $input.first().json;\nconst url = data.data[0].url;\nconst context = $('Parse DALL-E Prompt').first().json;\nconst complaints = context.discrepancy_details ? context.discrepancy_details.join(', ') : 'defects';\n\nreturn { \n    json: { \n        url: url,\n        complaints: complaints\n    } \n};"
       },
-      "id": "gen-model-2",
-      "name": "Gen Model 2 (GPT-Image-1)",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1.8,
+      "id": "norm-1",
+      "name": "Get URL 1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        3100,
-        350
+        3200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"Analyze this image against these complaints: {{ $json.complaints }}. Score (1-10) and explain. Output JSON: {score: number, analysis: string}\"\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": \"{{ $json.url }}\"\n          }\n        }\n      ]\n    }\n  ],\n  \"response_format\": { \"type\": \"json_object\" },\n  \"max_tokens\": 500\n}",
+        "options": {}
+      },
+      "id": "vision-1",
+      "name": "Analyze Image 1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3400,
+        0
       ],
       "credentials": {
         "openAiApi": {
@@ -69,6 +78,97 @@
           "name": "OpenAI Account"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst content = response.choices[0].message.content;\nconst parsed = JSON.parse(content);\nconst url = $('Get URL 1').first().json.url;\n\nreturn {\n  json: {\n    model_name: 'DALL-E 3',\n    image_url: url,\n    score: parsed.score,\n    analysis: parsed.analysis\n  }\n};"
+      },
+      "id": "meta-1",
+      "name": "Format Result 1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/images/generations",
+        "method": "POST",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"dall-e-3\",\n  \"prompt\": \"{{ $json.dalle_prompt }}\",\n  \"size\": \"1024x1024\",\n  \"quality\": \"hd\",\n  \"style\": \"vivid\",\n  \"n\": 1\n}",
+        "options": {}
+      },
+      "id": "gen-model-2",
+      "name": "Gen Model 2 (GPT-Image-1)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3000,
+        300
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst url = data.data[0].url;\nconst context = $('Parse DALL-E Prompt').first().json;\nconst complaints = context.discrepancy_details ? context.discrepancy_details.join(', ') : 'defects';\n\nreturn { \n    json: { \n        url: url,\n        complaints: complaints\n    } \n};"
+      },
+      "id": "norm-2",
+      "name": "Get URL 2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"Analyze this image against these complaints: {{ $json.complaints }}. Score (1-10) and explain. Output JSON: {score: number, analysis: string}\"\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": \"{{ $json.url }}\"\n          }\n        }\n      ]\n    }\n  ],\n  \"response_format\": { \"type\": \"json_object\" },\n  \"max_tokens\": 500\n}",
+        "options": {}
+      },
+      "id": "vision-2",
+      "name": "Analyze Image 2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3400,
+        300
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst content = response.choices[0].message.content;\nconst parsed = JSON.parse(content);\nconst url = $('Get URL 2').first().json.url;\n\nreturn {\n  json: {\n    model_name: 'GPT-Image-1',\n    image_url: url,\n    score: parsed.score,\n    analysis: parsed.analysis\n  }\n};"
+      },
+      "id": "meta-2",
+      "name": "Format Result 2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3600,
+        300
+      ]
     },
     {
       "parameters": {
@@ -76,71 +176,26 @@
         "combineBy": "combineAll",
         "options": {}
       },
-      "id": "merge-images",
-      "name": "Merge Images",
+      "id": "merge-results",
+      "name": "Merge Results",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        3350,
-        225
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Consolidate Images and Context\nconst items = $input.all();\n\n// Fetch Context from the Parse node\nconst contextItems = $('Parse DALL-E Prompt').all();\nconst context = contextItems.length > 0 ? contextItems[0].json : {};\n\n// Helper to extract URL\nfunction findUrl(item) {\n    if (!item || !item.json) return 'No Data';\n    if (item.json.data && Array.isArray(item.json.data) && item.json.data[0] && item.json.data[0].url) {\n        return item.json.data[0].url;\n    }\n    if (item.json.url) return item.json.url;\n    return 'URL Not Found';\n}\n\n// Map images (Item 0 = Model 1, Item 1 = Model 2)\nconst url1 = items.length > 0 ? findUrl(items[0]) : 'Missing';\nconst url2 = items.length > 1 ? findUrl(items[1]) : 'Missing';\n\nreturn {\n  json: {\n    ...context, // Pass through all context\n    images: [\n        { model: 'DALL-E 3', url: url1 },\n        { model: 'GPT-Image-1', url: url2 }\n    ]\n  }\n};"
-      },
-      "id": "prepare-vision-data",
-      "name": "Prepare Vision Data",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        3600,
-        225
-      ]
-    },
-    {
-      "parameters": {
-        "model": "gpt-4o",
-        "messages": {
-          "values": [
-            {
-              "content": "You are a product quality inspector. Compare these 2 AI-generated images against customer complaints.\n\nTask:\n1. Analyze each image URL provided.\n2. Score each (1-10) on how well it visually depicts the described discrepancies.\n3. Provide a detailed comparative analysis.\n\nOutput JSON:\n{\n  \"analysis\": [\n    {\"model\": \"DALL-E 3\", \"score\": number, \"notes\": \"string\"},\n    {\"model\": \"GPT-Image-1\", \"score\": number, \"notes\": \"string\"}\n  ],\n  \"best_model\": \"string\",\n  \"detailed_summary\": \"string\"\n}",
-              "role": "system"
-            },
-            {
-              "content": "=Discrepancies: {{ $json.discrepancy_details ? $json.discrepancy_details.join(', ') : 'None' }}\n\nImages:\n1. DALL-E 3: {{ $json.images[0].url }}\n2. GPT-Image-1: {{ $json.images[1].url }}\n\nAnalyze them.",
-              "role": "user"
-            }
-          ]
-        },
-        "jsonOutput": true
-      },
-      "id": "llm-vision-judge",
-      "name": "LLM Vision Judge",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1.8,
-      "position": [
         3800,
-        225
-      ],
-      "credentials": {
-        "openAiApi": {
-          "id": "YOUR_OPENAI_CREDENTIAL_ID",
-          "name": "OpenAI Account"
-        }
-      }
+        150
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Format data for Sheets\nconst contextItems = $('Prepare Vision Data').all();\nconst context = contextItems.length > 0 ? contextItems[0].json : {};\nconst analysis = $input.first().json;\n\nconst getScore = (idx) => analysis.analysis && analysis.analysis[idx] ? analysis.analysis[idx].score : 'N/A';\n\n// Prepare string for Google Sheets (handling arrays safely)\nconst summary = context.discrepancy_details ? context.discrepancy_details.join(' | ') : 'No discrepancies';\n\nreturn {\n  json: {\n    asin: context.asin || 'N/A',\n    product_title: context.product ? context.product.title : 'N/A',\n    \n    overall_sentiment: context.overall_sentiment || 'N/A',\n    discrepancy_summary: summary,\n    \n    // Image 1\n    img1_url: context.images && context.images[0] ? context.images[0].url : 'N/A',\n    img1_score: getScore(0),\n    \n    // Image 2\n    img2_url: context.images && context.images[1] ? context.images[1].url : 'N/A',\n    img2_score: getScore(1),\n    \n    best_model: analysis.best_model || 'N/A',\n    vision_judgment: analysis.detailed_summary || 'N/A',\n    analyzed_at: new Date().toISOString()\n  }\n};"
+        "jsCode": "// Aggregate Results\nconst items = $input.all();\nconst r1 = items[0].json; // Result 1\nconst r2 = items[1].json; // Result 2\n\n// Determine Best\nconst best = r1.score >= r2.score ? r1 : r2;\n\n// Get Context\nconst context = $('Parse DALL-E Prompt').first().json;\n\nreturn {\n  json: {\n    asin: context.asin,\n    product_title: context.product.title,\n    sentiment: context.overall_sentiment,\n    summarized_review: context.discrepancy_details ? context.discrepancy_details.join(' | ') : '',\n    \n    img1_url: r1.image_url,\n    img1_score: r1.score,\n    \n    img2_url: r2.image_url,\n    img2_score: r2.score,\n    \n    best_model: best.model_name,\n    judgment: `Best: ${best.model_name} (Score ${best.score}). ${best.analysis}`,\n    \n    analyzed_at: new Date().toISOString()\n  }\n};"
       },
-      "id": "format-final-data",
-      "name": "Format Final Data",
+      "id": "final-fmt",
+      "name": "Prepare Sheet Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         4000,
-        225
+        150
       ]
     },
     {
@@ -161,14 +216,14 @@
           "value": {
             "ASIN": "={{ $json.asin }}",
             "Product": "={{ $json.product_title }}",
-            "Sentiment": "={{ $json.overall_sentiment }}",
-            "Summarized Review": "={{ $json.discrepancy_summary }}",
+            "Sentiment": "={{ $json.sentiment }}",
+            "Summarized Review": "={{ $json.summarized_review }}",
             "Image 1 URL": "={{ $json.img1_url }}",
             "Image 1 Score": "={{ $json.img1_score }}",
             "Image 2 URL": "={{ $json.img2_url }}",
             "Image 2 Score": "={{ $json.img2_score }}",
             "Best Model": "={{ $json.best_model }}",
-            "Judgment": "={{ $json.vision_judgment }}",
+            "Judgment": "={{ $json.judgment }}",
             "Date": "={{ $json.analyzed_at }}"
           }
         },
@@ -180,7 +235,7 @@
       "typeVersion": 4.5,
       "position": [
         4200,
-        225
+        150
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -191,15 +246,15 @@
     },
     {
       "parameters": {
-        "jsCode": "console.log('Analysis Saved to Sheets');\nreturn { json: $json };"
+        "jsCode": "return { json: $json };"
       },
-      "id": "final-output",
+      "id": "final-out",
       "name": "Final Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         4400,
-        225
+        150
       ]
     }
   ],
@@ -224,7 +279,29 @@
       "main": [
         [
           {
-            "node": "Merge Images",
+            "node": "Get URL 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get URL 1": {
+      "main": [
+        [
+          {
+            "node": "Analyze Image 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Image 1": {
+      "main": [
+        [
+          {
+            "node": "Format Result 1",
             "type": "main",
             "index": 0
           }
@@ -235,47 +312,69 @@
       "main": [
         [
           {
-            "node": "Merge Images",
+            "node": "Get URL 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get URL 2": {
+      "main": [
+        [
+          {
+            "node": "Analyze Image 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Image 2": {
+      "main": [
+        [
+          {
+            "node": "Format Result 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result 1": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result 2": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "Merge Images": {
+    "Merge Results": {
       "main": [
         [
           {
-            "node": "Prepare Vision Data",
+            "node": "Prepare Sheet Data",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Prepare Vision Data": {
-      "main": [
-        [
-          {
-            "node": "LLM Vision Judge",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "LLM Vision Judge": {
-      "main": [
-        [
-          {
-            "node": "Format Final Data",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Final Data": {
+    "Prepare Sheet Data": {
       "main": [
         [
           {

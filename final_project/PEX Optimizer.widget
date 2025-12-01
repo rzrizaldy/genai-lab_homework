@@ -1,0 +1,169 @@
+{
+  "version": "1.0",
+  "name": "PEX Optimizer",
+  "template": "{\"type\":\"Card\",\"size\":\"md\",\"children\":[{\"type\":\"Form\",\"onSubmitAction\":{\"type\":\"pex.optimize.analyze\"},\"children\":[{\"type\":\"Col\",\"gap\":3,\"children\":[{\"type\":\"Col\",\"align\":\"center\",\"gap\":1,\"children\":[{\"type\":\"Title\",\"value\":\"Product Experience Optimizer\",\"size\":\"md\"},{\"type\":\"Text\",\"value\":\"Paste product details and reviews; you'll get sentiment, gaps, realistic image prompts, and copy tips.\",\"size\":\"sm\",\"color\":\"secondary\",\"textAlign\":\"center\"}]},{\"type\":\"Divider\"},{\"type\":\"Label\",\"value\":\"Product title\",\"fieldName\":\"product.title\"},{\"type\":\"Input\",\"name\":\"product.title\",\"placeholder\":\"e.g., 20oz Stainless Travel Mug\"},{\"type\":\"Label\",\"value\":\"Description\",\"fieldName\":\"product.description\"},{\"type\":\"Textarea\",\"name\":\"product.description\",\"rows\":4,\"placeholder\":\"Brief product description...\"},{\"type\":\"Row\",\"gap\":3,\"children\":[{\"type\":\"Col\",\"flex\":1,\"children\":[{\"type\":\"Label\",\"value\":\"Category\",\"fieldName\":\"product.category\"},{\"type\":\"Input\",\"name\":\"product.category\",\"placeholder\":\"e.g., Drinkware\"}]},{\"type\":\"Col\",\"width\":\"160px\",\"children\":[{\"type\":\"Label\",\"value\":\"Price (USD)\",\"fieldName\":\"product.price\"},{\"type\":\"Input\",\"name\":\"product.price\",\"inputType\":\"number\",\"placeholder\":\"e.g., 24.99\"}]}]},{\"type\":\"Label\",\"value\":\"Current image URL or description (optional)\",\"fieldName\":\"product.image\"},{\"type\":\"Input\",\"name\":\"product.image\",\"placeholder\":\"https://... or 'matte black mug on desk'\"},{\"type\":\"Label\",\"value\":\"Reviews (one per line: rating - text)\",\"fieldName\":\"reviews.plain\"},{\"type\":\"Textarea\",\"name\":\"reviews.plain\",\"rows\":6,\"placeholder\":\"5 - Love the insulation, kept coffee hot.\\\\n2 - Color looked lighter than photos.\\\\n3 - Lid leaks if tipped.\"},{\"type\":\"Divider\"},{\"type\":\"Caption\",\"value\":\"Or paste a JSON blob\"},{\"type\":\"Textarea\",\"name\":\"input.json\",\"rows\":6,\"placeholder\":\"{\\\"product\\\":{\\\"title\\\":\\\"...\\\",\\\"description\\\":\\\"...\\\",\\\"category\\\":\\\"...\\\",\\\"price\\\":24.99},\\\"reviews\\\":[{\\\"rating\\\":5,\\\"text\\\":\\\"...\\\"},{\\\"rating\\\":2,\\\"text\\\":\\\"...\\\"}]}\"},{\"type\":\"Row\",\"align\":\"center\",\"children\":[{\"type\":\"Checkbox\",\"name\":\"options.generate_images\",\"label\":\"Generate up to 2 images if available\"},{\"type\":\"Spacer\"},{\"type\":\"Button\",\"submit\":true,\"label\":\"Analyze\",\"style\":\"primary\",\"iconStart\":\"sparkle\"}]}]}]}]}",
+  "jsonSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  },
+  "outputJsonPreview": {
+    "type": "Card",
+    "size": "md",
+    "children": [
+      {
+        "type": "Form",
+        "onSubmitAction": {
+          "type": "pex.optimize.analyze"
+        },
+        "children": [
+          {
+            "type": "Col",
+            "gap": 3,
+            "children": [
+              {
+                "type": "Col",
+                "align": "center",
+                "gap": 1,
+                "children": [
+                  {
+                    "type": "Title",
+                    "value": "Product Experience Optimizer",
+                    "size": "md"
+                  },
+                  {
+                    "type": "Text",
+                    "value": "Paste product details and reviews; you'll get sentiment, gaps, realistic image prompts, and copy tips.",
+                    "size": "sm",
+                    "color": "secondary",
+                    "textAlign": "center"
+                  }
+                ]
+              },
+              {
+                "type": "Divider"
+              },
+              {
+                "type": "Label",
+                "value": "Product title",
+                "fieldName": "product.title"
+              },
+              {
+                "type": "Input",
+                "name": "product.title",
+                "placeholder": "e.g., 20oz Stainless Travel Mug"
+              },
+              {
+                "type": "Label",
+                "value": "Description",
+                "fieldName": "product.description"
+              },
+              {
+                "type": "Textarea",
+                "name": "product.description",
+                "rows": 4,
+                "placeholder": "Brief product description..."
+              },
+              {
+                "type": "Row",
+                "gap": 3,
+                "children": [
+                  {
+                    "type": "Col",
+                    "flex": 1,
+                    "children": [
+                      {
+                        "type": "Label",
+                        "value": "Category",
+                        "fieldName": "product.category"
+                      },
+                      {
+                        "type": "Input",
+                        "name": "product.category",
+                        "placeholder": "e.g., Drinkware"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Col",
+                    "width": "160px",
+                    "children": [
+                      {
+                        "type": "Label",
+                        "value": "Price (USD)",
+                        "fieldName": "product.price"
+                      },
+                      {
+                        "type": "Input",
+                        "name": "product.price",
+                        "inputType": "number",
+                        "placeholder": "e.g., 24.99"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Label",
+                "value": "Current image URL or description (optional)",
+                "fieldName": "product.image"
+              },
+              {
+                "type": "Input",
+                "name": "product.image",
+                "placeholder": "https://... or 'matte black mug on desk'"
+              },
+              {
+                "type": "Label",
+                "value": "Reviews (one per line: rating - text)",
+                "fieldName": "reviews.plain"
+              },
+              {
+                "type": "Textarea",
+                "name": "reviews.plain",
+                "rows": 6,
+                "placeholder": "5 - Love the insulation, kept coffee hot.\\n2 - Color looked lighter than photos.\\n3 - Lid leaks if tipped."
+              },
+              {
+                "type": "Divider"
+              },
+              {
+                "type": "Caption",
+                "value": "Or paste a JSON blob"
+              },
+              {
+                "type": "Textarea",
+                "name": "input.json",
+                "rows": 6,
+                "placeholder": "{\"product\":{\"title\":\"...\",\"description\":\"...\",\"category\":\"...\",\"price\":24.99},\"reviews\":[{\"rating\":5,\"text\":\"...\"},{\"rating\":2,\"text\":\"...\"}]}"
+              },
+              {
+                "type": "Row",
+                "align": "center",
+                "children": [
+                  {
+                    "type": "Checkbox",
+                    "name": "options.generate_images",
+                    "label": "Generate up to 2 images if available"
+                  },
+                  {
+                    "type": "Spacer"
+                  },
+                  {
+                    "type": "Button",
+                    "submit": true,
+                    "label": "Analyze",
+                    "style": "primary",
+                    "iconStart": "sparkle"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "encodedWidget": "eyJpZCI6ImFhN2IxYTliLTU3MjAtNDVhOS04Mzc3LTZmNDc5MWRhNjdlMSIsIm5hbWUiOiJQRVggT3B0aW1pemVyIiwidmlldyI6IjxDYXJkIHNpemU9XCJtZFwiPlxuICA8Rm9ybSBvblN1Ym1pdEFjdGlvbj17eyB0eXBlOiBcInBleC5vcHRpbWl6ZS5hbmFseXplXCIgfX0-XG4gICAgPENvbCBnYXA9ezN9PlxuICAgICAgPENvbCBhbGlnbj1cImNlbnRlclwiIGdhcD17MX0-XG4gICAgICAgIDxUaXRsZSB2YWx1ZT1cIlByb2R1Y3QgRXhwZXJpZW5jZSBPcHRpbWl6ZXJcIiBzaXplPVwibWRcIiAvPlxuICAgICAgICA8VGV4dFxuICAgICAgICAgIHZhbHVlPVwiUGFzdGUgcHJvZHVjdCBkZXRhaWxzIGFuZCByZXZpZXdzOyB5b3UnbGwgZ2V0IHNlbnRpbWVudCwgZ2FwcywgcmVhbGlzdGljIGltYWdlIHByb21wdHMsIGFuZCBjb3B5IHRpcHMuXCJcbiAgICAgICAgICBzaXplPVwic21cIlxuICAgICAgICAgIGNvbG9yPVwic2Vjb25kYXJ5XCJcbiAgICAgICAgICB0ZXh0QWxpZ249XCJjZW50ZXJcIlxuICAgICAgICAvPlxuICAgICAgPC9Db2w-XG4gICAgICA8RGl2aWRlciAvPlxuICAgICAgPExhYmVsIHZhbHVlPVwiUHJvZHVjdCB0aXRsZVwiIGZpZWxkTmFtZT1cInByb2R1Y3QudGl0bGVcIiAvPlxuICAgICAgPElucHV0XG4gICAgICAgIG5hbWU9XCJwcm9kdWN0LnRpdGxlXCJcbiAgICAgICAgcGxhY2Vob2xkZXI9XCJlLmcuLCAyMG96IFN0YWlubGVzcyBUcmF2ZWwgTXVnXCJcbiAgICAgIC8-XG5cbiAgICAgIDxMYWJlbCB2YWx1ZT1cIkRlc2NyaXB0aW9uXCIgZmllbGROYW1lPVwicHJvZHVjdC5kZXNjcmlwdGlvblwiIC8-XG4gICAgICA8VGV4dGFyZWFcbiAgICAgICAgbmFtZT1cInByb2R1Y3QuZGVzY3JpcHRpb25cIlxuICAgICAgICByb3dzPXs0fVxuICAgICAgICBwbGFjZWhvbGRlcj1cIkJyaWVmIHByb2R1Y3QgZGVzY3JpcHRpb24uLi5cIlxuICAgICAgLz5cblxuICAgICAgPFJvdyBnYXA9ezN9PlxuICAgICAgICA8Q29sIGZsZXg9ezF9PlxuICAgICAgICAgIDxMYWJlbCB2YWx1ZT1cIkNhdGVnb3J5XCIgZmllbGROYW1lPVwicHJvZHVjdC5jYXRlZ29yeVwiIC8-XG4gICAgICAgICAgPElucHV0IG5hbWU9XCJwcm9kdWN0LmNhdGVnb3J5XCIgcGxhY2Vob2xkZXI9XCJlLmcuLCBEcmlua3dhcmVcIiAvPlxuICAgICAgICA8L0NvbD5cbiAgICAgICAgPENvbCB3aWR0aD1cIjE2MHB4XCI-XG4gICAgICAgICAgPExhYmVsIHZhbHVlPVwiUHJpY2UgKFVTRClcIiBmaWVsZE5hbWU9XCJwcm9kdWN0LnByaWNlXCIgLz5cbiAgICAgICAgICA8SW5wdXRcbiAgICAgICAgICAgIG5hbWU9XCJwcm9kdWN0LnByaWNlXCJcbiAgICAgICAgICAgIGlucHV0VHlwZT1cIm51bWJlclwiXG4gICAgICAgICAgICBwbGFjZWhvbGRlcj1cImUuZy4sIDI0Ljk5XCJcbiAgICAgICAgICAvPlxuICAgICAgICA8L0NvbD5cbiAgICAgIDwvUm93PlxuXG4gICAgICA8TGFiZWxcbiAgICAgICAgdmFsdWU9XCJDdXJyZW50IGltYWdlIFVSTCBvciBkZXNjcmlwdGlvbiAob3B0aW9uYWwpXCJcbiAgICAgICAgZmllbGROYW1lPVwicHJvZHVjdC5pbWFnZVwiXG4gICAgICAvPlxuICAgICAgPElucHV0XG4gICAgICAgIG5hbWU9XCJwcm9kdWN0LmltYWdlXCJcbiAgICAgICAgcGxhY2Vob2xkZXI9XCJodHRwczovLy4uLiBvciAnbWF0dGUgYmxhY2sgbXVnIG9uIGRlc2snXCJcbiAgICAgIC8-XG5cbiAgICAgIDxMYWJlbFxuICAgICAgICB2YWx1ZT1cIlJldmlld3MgKG9uZSBwZXIgbGluZTogcmF0aW5nIC0gdGV4dClcIlxuICAgICAgICBmaWVsZE5hbWU9XCJyZXZpZXdzLnBsYWluXCJcbiAgICAgIC8-XG4gICAgICA8VGV4dGFyZWFcbiAgICAgICAgbmFtZT1cInJldmlld3MucGxhaW5cIlxuICAgICAgICByb3dzPXs2fVxuICAgICAgICBwbGFjZWhvbGRlcj1cIjUgLSBMb3ZlIHRoZSBpbnN1bGF0aW9uLCBrZXB0IGNvZmZlZSBob3QuXFxuMiAtIENvbG9yIGxvb2tlZCBsaWdodGVyIHRoYW4gcGhvdG9zLlxcbjMgLSBMaWQgbGVha3MgaWYgdGlwcGVkLlwiXG4gICAgICAvPlxuXG4gICAgICA8RGl2aWRlciAvPlxuICAgICAgPENhcHRpb24gdmFsdWU9XCJPciBwYXN0ZSBhIEpTT04gYmxvYlwiIC8-XG4gICAgICA8VGV4dGFyZWFcbiAgICAgICAgbmFtZT1cImlucHV0Lmpzb25cIlxuICAgICAgICByb3dzPXs2fVxuICAgICAgICBwbGFjZWhvbGRlcj0ne1wicHJvZHVjdFwiOntcInRpdGxlXCI6XCIuLi5cIixcImRlc2NyaXB0aW9uXCI6XCIuLi5cIixcImNhdGVnb3J5XCI6XCIuLi5cIixcInByaWNlXCI6MjQuOTl9LFwicmV2aWV3c1wiOlt7XCJyYXRpbmdcIjo1LFwidGV4dFwiOlwiLi4uXCJ9LHtcInJhdGluZ1wiOjIsXCJ0ZXh0XCI6XCIuLi5cIn1dfSdcbiAgICAgIC8-XG5cbiAgICAgIDxSb3cgYWxpZ249XCJjZW50ZXJcIj5cbiAgICAgICAgPENoZWNrYm94XG4gICAgICAgICAgbmFtZT1cIm9wdGlvbnMuZ2VuZXJhdGVfaW1hZ2VzXCJcbiAgICAgICAgICBsYWJlbD1cIkdlbmVyYXRlIHVwIHRvIDIgaW1hZ2VzIGlmIGF2YWlsYWJsZVwiXG4gICAgICAgIC8-XG4gICAgICAgIDxTcGFjZXIgLz5cbiAgICAgICAgPEJ1dHRvbiBzdWJtaXQgbGFiZWw9XCJBbmFseXplXCIgc3R5bGU9XCJwcmltYXJ5XCIgaWNvblN0YXJ0PVwic3BhcmtsZVwiIC8-XG4gICAgICA8L1Jvdz5cbiAgICA8L0NvbD5cbiAgPC9Gb3JtPlxuPC9DYXJkPiIsImRlZmF1bHRTdGF0ZSI6e30sInN0YXRlcyI6W10sInNjaGVtYSI6ImltcG9ydCB7IHogfSBmcm9tIFwiem9kXCJcblxuY29uc3QgV2lkZ2V0U3RhdGUgPSB6LnN0cmljdE9iamVjdCh7fSlcblxuZXhwb3J0IGRlZmF1bHQgV2lkZ2V0U3RhdGUiLCJqc29uU2NoZW1hIjp7fSwic2NoZW1hTW9kZSI6InpvZCIsInNjaGVtYVZhbGlkaXR5IjoidmFsaWQiLCJ2aWV3VmFsaWRpdHkiOiJ2YWxpZCIsImRlZmF1bHRTdGF0ZVZhbGlkaXR5IjoidmFsaWQifQ"
+}
