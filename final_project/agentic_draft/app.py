@@ -5,7 +5,7 @@ Seller Quality Optimizer - Flask Web Application
 import os
 import json
 from pathlib import Path
-from flask import Flask, render_template, jsonify, send_from_directory, Response
+from flask import Flask, render_template, jsonify, send_from_directory, Response, request
 from dotenv import load_dotenv
 from workflow import WorkflowEngine
 
@@ -37,6 +37,9 @@ def run_workflow():
     if not api_key:
         return jsonify({"success": False, "error": "OPENAI_API_KEY not set in .env file"})
     
+    # Get search query if provided
+    search_query = request.args.get('q', '').strip()
+    
     def generate():
         global current_workflow
         try:
@@ -47,7 +50,7 @@ def run_workflow():
             )
             
             # Run workflow with progress callbacks
-            for progress in current_workflow.run_full_workflow_with_progress():
+            for progress in current_workflow.run_full_workflow_with_progress(search_query=search_query):
                 yield f"data: {json.dumps(progress)}\n\n"
                 
         except Exception as e:

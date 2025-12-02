@@ -39,14 +39,30 @@ class WorkflowEngine:
         self.steps.append(step)
         return step
     
-    def select_random_product_with_reviews(self, max_attempts: int = 50) -> dict:
-        """Step 1: Select a random product that has reviews"""
+    def select_random_product_with_reviews(self, search_query: str = "", max_attempts: int = 50) -> dict:
+        """Step 1: Select a random product that has reviews, optionally filtered by search query"""
         self.log_step("Selecting Random Product", "running")
         
+        # Filter products by search query if provided
+        if search_query:
+            # Case-insensitive search in title and brand
+            mask = (
+                self.products_df['title'].str.lower().str.contains(search_query.lower(), na=False) |
+                self.products_df['brand_name'].str.lower().str.contains(search_query.lower(), na=False)
+            )
+            filtered_products = self.products_df[mask]
+            
+            if len(filtered_products) == 0:
+                raise Exception(f"No products found matching '{search_query}'")
+            
+            search_pool = filtered_products
+        else:
+            search_pool = self.products_df
+        
         for attempt in range(max_attempts):
-            # Random product
-            idx = random.randint(0, len(self.products_df) - 1)
-            product = self.products_df.iloc[idx]
+            # Random product from pool
+            idx = random.randint(0, len(search_pool) - 1)
+            product = search_pool.iloc[idx]
             asin = product['asin']
             
             # Check for reviews
@@ -63,12 +79,15 @@ class WorkflowEngine:
                 }
                 self.result['reviews'] = reviews.to_dict('records')
                 self.result['attempt'] = attempt + 1
+                self.result['search_query'] = search_query
+                self.result['matches_found'] = len(search_pool) if search_query else len(self.products_df)
                 
                 self.log_step("Selecting Random Product", "completed", {
                     "asin": asin,
                     "title": product['title'][:50] + "...",
                     "review_count": len(reviews),
-                    "attempts": attempt + 1
+                    "attempts": attempt + 1,
+                    "search_matches": len(search_pool) if search_query else "all"
                 })
                 return self.result['product']
         
@@ -473,22 +492,29 @@ Output JSON:
                 "steps": self.steps
             }
     
-    def run_full_workflow_with_progress(self):
+    def run_full_workflow_with_progress(self, search_query: str = ""):
         """Execute the complete workflow with progress updates (generator)"""
         try:
             # Step 1: Select Product
-            yield {"type": "step", "step": 1, "status": "running", "message": "Selecting random product with reviews..."}
-            product = self.select_random_product_with_reviews()
+            if search_query:
+                yield {"type": "step", "step": 1, "status": "running", "message": f"Searching for products matching '{search_query}'..."}
+            else:
+                yield {"type": "step", "step": 1, "status": "running", "message": "Selecting random product with reviews..."}
+            
+            product = self.select_random_product_with_reviews(search_query=search_query)
+            
+            matches_info = f" (from {self.result.get('matches_found', '?')} matches)" if search_query else ""
             yield {
                 "type": "step", 
                 "step": 1, 
                 "status": "completed", 
-                "message": f"Selected: {product['title'][:50]}...",
+                "message": f"Selected: {product['title'][:50]}...{matches_info}",
                 "data": {
                     "asin": product['asin'],
                     "title": product['title'][:60],
                     "brand": product.get('brand', 'N/A'),
-                    "reviews": len(self.result.get('reviews', []))
+                    "reviews": len(self.result.get('reviews', [])),
+                    "search_matches": self.result.get('matches_found', 'N/A')
                 }
             }
             
@@ -516,7 +542,7 @@ Output JSON:
                 "step": 3,
                 "status": "completed",
                 "message": f"Prompt created ({len(dalle_prompt)} chars)",
-                "data": {"prompt_preview": dalle_prompt[:100] + "..."}
+                "data": {"prompt_preview": dalle_prompt}
             }
             
             # Step 4: Generate Images
